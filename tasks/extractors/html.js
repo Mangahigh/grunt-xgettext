@@ -30,29 +30,34 @@ var _ = require("lodash");
  *                                           ...
  *                                       }
  */
-function getMessages(content, regex, subRE, quoteRegex, quote, options) {
+function getMessages(contents, regex, subRE, quoteRegex, quote, options, file) {
     var messages = {}, result;
 
-    while ((result = regex.exec(content)) !== null) {
-        var strings = result[1],
-            singularKey = void 0;
+    var ln = 1;
+    contents.split("\n").forEach(function (content) {
+        ++ln;
+        while ((result = regex.exec(content)) !== null) {
+            var strings = result[1],
+                singularKey = void 0;
 
-        while ((result = subRE.exec(strings)) !== null) {
-            var string = options.processMessage(result[1].replace(quoteRegex, quote));
+            while ((result = subRE.exec(strings)) !== null) {
+                var string = options.processMessage(result[1].replace(quoteRegex, quote));
 
-            // if singular form already defined add message as plural
-            if (typeof singularKey !== 'undefined') {
-                messages[singularKey].plural = string;
-            // if not defined init message object
-            } else {
-                singularKey = string;
-                messages[singularKey] = {
-                    singular: string,
-                    message: ""
-                };
+                // if singular form already defined add message as plural
+                if (typeof singularKey !== 'undefined') {
+                    messages[singularKey].plural = string;
+                    // if not defined init message object
+                } else {
+                    singularKey = string;
+                    messages[singularKey] = {
+                        location: file + ':' + ln,
+                        singular: string,
+                        message: ""
+                    };
+                }
             }
         }
-    }
+    });
 
     return messages;
 }
@@ -62,14 +67,14 @@ module.exports = function(file, options) {
         fn = _.flatten([ options.functionName ]),
         messages = {};
 
-    var extractStrings = function(quote, fn) {
+    var extractStrings = function(quote, fn, ln) {
         var regex = new RegExp("" + fn + "\\(((?:" +
             quote + "(?:[^" + quote + "\\\\]|\\\\.)+" + quote +
             "\\s*)+)\\)", "g");
         var subRE = new RegExp(quote + "((?:[^" + quote + "\\\\]|\\\\.)+)" + quote, "g");
         var quoteRegex = new RegExp("\\\\" + quote, "g");
 
-        _.extend(messages, getMessages(contents, regex, subRE, quoteRegex, quote, options));
+        _.extend(messages, getMessages(contents, regex, subRE, quoteRegex, quote, options, file));
     };
 
     _.each(fn, function(func) {

@@ -3,6 +3,8 @@ function test() {
     tr("Boom");
     tr("Roos");
     tr("Vis", "Vuur");
+    tr('Vier');
+    tr('Vier');
 }
 
 function test2() {

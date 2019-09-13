@@ -115,7 +115,10 @@ module.exports = function(file, options) {
     _.each(fn, function(func) {
         var regex = new RegExp("\\{\\{\\s*" + func + "\\s+(.*?)\\}\\}", "g");
         var result;
+        var lineNumber = 0;
         while ((result = regex.exec(contents)) !== null) {
+            ++lineNumber;
+
             var tokens = tokenize(result[1]);
             if (tokens.length === 0 || tokens[0].type !== "string") {
                 continue;
@@ -123,7 +126,8 @@ module.exports = function(file, options) {
 
             var message = {
                 singular: tokens[0].value,
-                message: ""
+                message: "",
+                location: file + ':' + lineNumber
             };
             if (tokens.length > 2 && tokens[1].type === "string") {
                 message.plural = tokens[1].value;
