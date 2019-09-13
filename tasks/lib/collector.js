@@ -38,7 +38,7 @@ Collector.prototype.addMessage = function(message) {
     if (existingMessage) {
         if (existingMessage.comment) {
             if (message.comment) {
-                existingMessage.comment = _.unique(existingMessage.comment.split("\n")
+                existingMessage.comment = _.uniq(existingMessage.comment.split("\n")
                                                    .concat(message.comment.split("\n"))).join("\n");
             }
         } else {

@@ -14,9 +14,10 @@ var _ = require("lodash");
 
 module.exports = function(file, options) {
 
-    var collector = new (require("../lib/collector"));
-
+    var collector = new (require("../lib/collector"))();
     var fn = _.flatten([ options.functionName ]);
+    var contents = grunt.file.read(file);
+    var lines = _.map(contents.split("\n"), function(line) { return line.trim(); });
 
     function flattenIdentifier(identifier) {
         if (identifier.type === "Identifier") {
@@ -42,6 +43,21 @@ module.exports = function(file, options) {
             grunt.log.debug("Found unhandled string: " + JSON.stringify(string));
             return "";
         }
+    }
+
+    function parseOptions(syntax) {
+        var options = {};
+        if (syntax.type === "ObjectExpression") {
+            _.each(syntax.properties, function(propertySyntax) {
+                var key = (propertySyntax.key.type === "Literal" ? propertySyntax.key.value
+                    : propertySyntax.key.name),
+                    value = flattenString(propertySyntax.value);
+                if (key && value) {
+                    options[key] = value;
+                }
+            });
+        }
+        return options;
     }
 
     function parseInvocation(syntax) {
@@ -84,21 +100,6 @@ module.exports = function(file, options) {
         }
     }
 
-    function parseOptions(syntax) {
-        var options = {};
-        if (syntax.type === "ObjectExpression") {
-            _.each(syntax.properties, function(propertySyntax) {
-                var key = (propertySyntax.key.type === "Literal" ? propertySyntax.key.value
-                                                                 : propertySyntax.key.name),
-                    value = flattenString(propertySyntax.value);
-                if (key && value) {
-                    options[key] = value;
-                }
-            });
-        }
-        return options;
-    }
-
     function scan(syntax) {
         grunt.log.debug("Scanning node: " + syntax.type);
 
@@ -117,7 +118,7 @@ module.exports = function(file, options) {
             break;
         case "CallExpression":
             var callee = syntax.callee;
-            if (_.contains(fn, flattenIdentifier(callee))) {
+            if (_.includes(fn, flattenIdentifier(callee))) {
                 parseInvocation(syntax);
             } else {
                 scan(callee);
@@ -216,8 +217,6 @@ module.exports = function(file, options) {
         }
     }
 
-    var contents = grunt.file.read(file);
-    var lines = _.map(contents.split("\n"), function(line) { return line.trim(); });
     scan(esprima.parse(contents, { loc: true }));
 
     return collector.messages;

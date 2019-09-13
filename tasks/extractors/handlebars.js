@@ -107,7 +107,7 @@ function tokenize(substring) {
 
 module.exports = function(file, options) {
 
-    var collector = new (require("../lib/collector"));
+    var collector = new (require("../lib/collector"))();
 
     var contents = grunt.file.read(file).replace("\n", " "),
         fn = _.flatten([ options.functionName ]);
@@ -132,15 +132,19 @@ module.exports = function(file, options) {
             if (tokens.length > 2 && tokens[1].type === "string") {
                 message.plural = tokens[1].value;
             }
-            _.each(tokens, function(token) {
-                if (token.type === "hash") {
-                    if (token.key === "comment" || token.key === "context" &&
-                        token.value.type === "string") {
 
-                        message[token.key] = token.value.value;
-                    }
-                }
-            });
+            var tokenMap = tokens.filter(function (token) {
+                return token.type === "hash" &&
+                    (
+                        token.key === "comment" ||
+                        (token.key === "context" && token.value.type === "string")
+                    );
+            }).reduce(function (acc, token) {
+                acc[token.key] = token.value.value;
+                return acc;
+            }, {});
+
+            _.merge(message, tokenMap);
 
             collector.addMessage(message);
         }
