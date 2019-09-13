@@ -8,17 +8,16 @@
 
 "use strict";
 
-var grunt = require("grunt");
-var _ = require("lodash");
+const grunt = require('grunt');
+const _ = require('lodash');
 
 /**
  * Convenience object for collecting the extracted messages before passing them back to the main
  * xgettext task.
  */
-function Collector() {
-
+const Collector = function (){
     this.messages = {};
-}
+};
 
 /**
  * Adds a new message to the pool of collected messages.
@@ -31,15 +30,15 @@ function Collector() {
  */
 Collector.prototype.addMessage = function(message) {
 
-    var messages = this.messages;
+    const messages = this.messages;
+    const key = (message.context ? message.context + ':' : '') + message.singular;
+    const existingMessage = messages[key];
 
-    var key = (message.context ? message.context + ":" : "") + message.singular;
-    var existingMessage = messages[key];
     if (existingMessage) {
         if (existingMessage.comment) {
             if (message.comment) {
-                existingMessage.comment = _.uniq(existingMessage.comment.split("\n")
-                                                   .concat(message.comment.split("\n"))).join("\n");
+                existingMessage.comment = _.uniq(existingMessage.comment.split('\n')
+                                                   .concat(message.comment.split('\n'))).join('\n');
             }
         } else {
             existingMessage.comment = message.comment;
@@ -47,7 +46,7 @@ Collector.prototype.addMessage = function(message) {
 
         if (existingMessage.location) {
             if (message.location) {
-                existingMessage.location = [existingMessage.location, message.location].join("\n");
+                existingMessage.location = [existingMessage.location, message.location].join('\n');
             }
         } else {
             existingMessage.location = message.location;
@@ -57,9 +56,7 @@ Collector.prototype.addMessage = function(message) {
             if (existingMessage.plural) {
                 if (existingMessage.plural !== message.plural) {
                     grunt.log.error(
-                        "'" + existingMessage.plural + "' and '" + message.plural + "' " +
-                        "are different plurals for the same singular key ('" +
-                        message.singular + "'). Use contexts to differentiate them."
+                        `"${existingMessage.plural}" and "${message.plural}" are different plurals for the same singular key ("${message.singular}"). Use contexts to differentiate them.`
                     );
                 }
             } else {

@@ -8,21 +8,23 @@
 
 "use strict";
 
-var grunt = require("grunt");
-var _ = require("lodash");
+const grunt = require('grunt');
+const _ = require('lodash');
 
-function tokenize(substring) {
+const tokenize = substring => {
 
-    grunt.log.debug("Tokenizing: " + substring);
+    grunt.log.debug('Tokenizing: ' + substring);
 
-    var tokens = [], token = null;
-    for (var i = 0; i < substring.length; i++) {
-        var char = substring.charAt(i);
+    const tokens = [];
+    let token = null;
+
+    for (let i = 0; i < substring.length; i++) {
+        let char = substring.charAt(i);
         if (token) {
             switch (token.type) {
-            case "identifier":
-                if (char === "=") {
-                    token.type = "hash";
+            case 'identifier':
+                if (char === '=') {
+                    token.type = 'hash';
                     token.key = token.value;
                     token.value = null;
                 } else if (/\s/.test(char)) {
@@ -32,14 +34,14 @@ function tokenize(substring) {
                     token.value += char;
                 }
                 break;
-            case "hash":
+            case 'hash':
                 if (token.value) {
-                    if (token.value.type === "string") {
+                    if (token.value.type === 'string') {
                         if (char === token.value.quote) {
                             tokens.push(token);
                             token = null;
                         } else {
-                            if (char === "\\") {
+                            if (char === '\\') {
                                 i++;
                                 char = substring.charAt(i);
                             }
@@ -52,18 +54,18 @@ function tokenize(substring) {
                         token.value.value += char;
                     }
                 } else {
-                    if (char === "'" || char === '"') {
-                        token.value = { type: "string", value: "", quote: char };
+                    if (char === '"' || char === '\'') {
+                        token.value = { type: 'string', value: '', quote: char };
                     } else if (/\d/.test(char)) {
-                        token.value = { type: "number", value: "" };
+                        token.value = { type: 'number', value: '' };
                     } else if (/\s/.test(char)) {
                         // continue
                     } else {
-                        token.value = { type: "identifier", value: "" };
+                        token.value = { type: 'identifier', value: '' };
                     }
                 }
                 break;
-            case "number":
+            case 'number':
                 if (/\s/.test(char)) {
                     tokens.push(token);
                     token = null;
@@ -71,12 +73,12 @@ function tokenize(substring) {
                     token.value.value += char;
                 }
                 break;
-            case "string":
+            case 'string':
                 if (char === token.quote) {
                     tokens.push(token);
                     token = null;
                 } else {
-                    if (char === "\\") {
+                    if (char === '\\') {
                         i++;
                         char = substring.charAt(i);
                     }
@@ -85,14 +87,14 @@ function tokenize(substring) {
                 break;
             }
         } else {
-            if (char === "'" || char === '"') {
-                token = { type: "string", value: "", quote: char };
+            if (char === '"' || char === '\'') {
+                token = { type: 'string', value: '', quote: char };
             } else if (/\d/.test(char)) {
-                token = { type: "number", value: char };
+                token = { type: 'number', value: char };
             } else if (/\s/.test(char)) {
                 // continue
             } else {
-                token = { type: "identifier", value: char };
+                token = { type: 'identifier', value: char };
             }
         }
     }
@@ -100,46 +102,45 @@ function tokenize(substring) {
         tokens.push(token);
     }
 
-    grunt.log.debug("Result: " + JSON.stringify(tokens));
+    grunt.log.debug('Result: ' + JSON.stringify(tokens));
 
     return tokens;
-}
+};
 
-module.exports = function(file, options) {
+module.exports = (file, options) => {
 
-    var collector = new (require("../lib/collector"))();
+    const collector = new (require('../lib/collector'))();
 
-    var contents = grunt.file.read(file).replace("\n", " "),
+    const contents = grunt.file.read(file).replace('\n', ' '),
         fn = _.flatten([ options.functionName ]);
 
-    _.each(fn, function(func) {
-        var regex = new RegExp("\\{\\{\\s*" + func + "\\s+(.*?)\\}\\}", "g");
-        var result;
-        var lineNumber = 0;
+    _.each(fn, func => {
+        const regex = new RegExp('\\{\\{\\s*' + func + '\\s+(.*?)\\}\\}', 'g');
+        let result;
+        let lineNumber = 0;
+
         while ((result = regex.exec(contents)) !== null) {
             ++lineNumber;
 
-            var tokens = tokenize(result[1]);
-            if (tokens.length === 0 || tokens[0].type !== "string") {
+            const tokens = tokenize(result[1]);
+            if (tokens.length === 0 || tokens[0].type !== 'string') {
                 continue;
             }
 
-            var message = {
+            const message = {
                 singular: tokens[0].value,
-                message: "",
+                message: '',
                 location: file + ':' + lineNumber
             };
-            if (tokens.length > 2 && tokens[1].type === "string") {
+            if (tokens.length > 2 && tokens[1].type === 'string') {
                 message.plural = tokens[1].value;
             }
 
-            var tokenMap = tokens.filter(function (token) {
-                return token.type === "hash" &&
-                    (
-                        token.key === "comment" ||
-                        (token.key === "context" && token.value.type === "string")
-                    );
-            }).reduce(function (acc, token) {
+            const tokenMap = tokens.filter(token => token.type === 'hash' &&
+                (
+                    token.key === 'comment' ||
+                    (token.key === 'context' && token.value.type === 'string')
+                )).reduce((acc, token) => {
                 acc[token.key] = token.value.value;
                 return acc;
             }, {});

@@ -8,48 +8,48 @@
 
 "use strict";
 
-var esprima = require("esprima");
-var grunt = require("grunt");
-var _ = require("lodash");
+const esprima = require('esprima');
+const grunt = require('grunt');
+const _ = require('lodash');
 
-module.exports = function(file, options) {
+module.exports = (file, options) => {
 
-    var collector = new (require("../lib/collector"))();
-    var fn = _.flatten([ options.functionName ]);
-    var contents = grunt.file.read(file);
-    var lines = _.map(contents.split("\n"), function(line) { return line.trim(); });
+    const collector = new (require('../lib/collector'))();
+    const fn = _.flatten([ options.functionName ]);
+    const contents = grunt.file.read(file);
+    const lines = _.map(contents.split('\n'), line => line.trim());
 
-    function flattenIdentifier(identifier) {
-        if (identifier.type === "Identifier") {
+    const flattenIdentifier = identifier => {
+        if (identifier.type === 'Identifier') {
             return identifier.name;
-        } else if (identifier.type === "MemberExpression" && identifier.computed === false &&
-                   identifier.object.type === "Identifier") {
-            return identifier.object.name + "." + identifier.property.name;
-        } else if (identifier.type === "MemberExpression" && identifier.computed === false &&
-                   identifier.object.type === "MemberExpression") {
-            return flattenIdentifier(identifier.object) + "." + identifier.property.name;
+        } else if (identifier.type === 'MemberExpression' && identifier.computed === false &&
+                   identifier.object.type === 'Identifier') {
+            return identifier.object.name + '.' + identifier.property.name;
+        } else if (identifier.type === 'MemberExpression' && identifier.computed === false &&
+                   identifier.object.type === 'MemberExpression') {
+            return flattenIdentifier(identifier.object) + '.' + identifier.property.name;
         } else {
-            grunt.log.debug("Found unhandled identifier: " + JSON.stringify(identifier));
-            return "";
+            grunt.log.debug(`Found unhandled identifier: ${JSON.stringify(identifier)}`);
+            return '';
         }
-    }
+    };
 
-    function flattenString(string) {
-        if (string.type === "Literal" && _.isString(string.value)) {
+    const flattenString = string => {
+        if (string.type === 'Literal' && _.isString(string.value)) {
             return string.value;
-        } else if (string.type === "BinaryExpression" && string.operator === "+") {
+        } else if (string.type === 'BinaryExpression' && string.operator === '+') {
             return flattenString(string.left) + flattenString(string.right);
         } else {
-            grunt.log.debug("Found unhandled string: " + JSON.stringify(string));
-            return "";
+            grunt.log.debug(`Found unhandled string: ${JSON.stringify(string)}`);
+            return '';
         }
-    }
+    };
 
-    function parseOptions(syntax) {
-        var options = {};
-        if (syntax.type === "ObjectExpression") {
-            _.each(syntax.properties, function(propertySyntax) {
-                var key = (propertySyntax.key.type === "Literal" ? propertySyntax.key.value
+    const parseOptions = syntax => {
+        const options = {};
+        if (syntax.type === 'ObjectExpression') {
+            _.each(syntax.properties, propertySyntax => {
+                const key = (propertySyntax.key.type === 'Literal' ? propertySyntax.key.value
                     : propertySyntax.key.name),
                     value = flattenString(propertySyntax.value);
                 if (key && value) {
@@ -58,16 +58,17 @@ module.exports = function(file, options) {
             });
         }
         return options;
-    }
+    };
 
-    function parseInvocation(syntax) {
+    const parseInvocation = syntax => {
         if (syntax.arguments.length > 0) {
-            var singular = flattenString(syntax.arguments[0]);
-            var plural, options = {};
+            const singular = flattenString(syntax.arguments[0]);
+            let plural;
+            let options = {};
 
             if (syntax.arguments.length > 1) {
-                var second = syntax.arguments[1];
-                if (second.type === "ObjectExpression") {
+                const second = syntax.arguments[1];
+                if (second.type === 'ObjectExpression') {
                     options = parseOptions(second);
                 } else {
                     plural = flattenString(second);
@@ -77,126 +78,127 @@ module.exports = function(file, options) {
                 }
             }
 
-            var message = {
-                comment: options.comment || "",
-                context: options.context || "",
-                message: "",
-                plural: plural || "",
+            const message = {
+                comment: options.comment || '',
+                context: options.context || '',
+                message: '',
+                plural: plural || '',
                 singular: singular,
                 location: file + ':' + syntax.loc.start.line
             };
-            
-            var lineIndex = syntax.loc.start.line - 2; // loc.start.line is 1-based
-            while (lineIndex > 0 && lines[lineIndex].slice(0, 3) === "///") {
+
+            let lineIndex = syntax.loc.start.line - 2; // loc.start.line is 1-based
+
+            while (lineIndex > 0 && lines[lineIndex].slice(0, 3) === '///') {
                 message.comment = lines[lineIndex].slice(3).trim() +
-                                  (message.comment ? "\n" : "") +
+                                  (message.comment ? '\n' : '') +
                                   message.comment;
                 lineIndex--;
             }
 
             collector.addMessage(message);
         } else {
-            grunt.log.debug("No arguments to translation method");
+            grunt.log.debug('No arguments to translation method');
         }
-    }
+    };
 
-    function scan(syntax) {
-        grunt.log.debug("Scanning node: " + syntax.type);
+    const scan = syntax => {
+        grunt.log.debug('Scanning node: ' + syntax.type);
 
         switch (syntax.type) {
-        case "ArrayExpression":
-            _.each(syntax.elements, function(elementSyntax) {
+        case 'ArrayExpression':
+            _.each(syntax.elements, elementSyntax => {
                 scan(elementSyntax);
             });
             break;
-        case "AssignmentExpression":
+        case 'AssignmentExpression':
             scan(syntax.right);
             break;
-        case "BinaryExpression":
+        case 'BinaryExpression':
             scan(syntax.left);
             scan(syntax.right);
             break;
-        case "CallExpression":
-            var callee = syntax.callee;
+        case 'CallExpression':
+            const callee = syntax.callee;
             if (_.includes(fn, flattenIdentifier(callee))) {
                 parseInvocation(syntax);
             } else {
                 scan(callee);
-                _.each(syntax.arguments, function(argumentSyntax) {
+                _.each(syntax.arguments, argumentSyntax => {
                     scan(argumentSyntax);
                 });
             }
             break;
-        case "ConditionalExpression":
+        case 'ConditionalExpression':
             scan(syntax.alternate);
             scan(syntax.consequent);
             break;
-        case "ExpressionStatement":
+        case 'ExpressionStatement':
             scan(syntax.expression);
             break;
-        case "IfStatement":
+        case 'IfStatement':
             scan(syntax.consequent);
             if (syntax.alternate) {
                 scan(syntax.alternate);
             }
             break;
-        case "LogicalExpression":
+        case 'LogicalExpression':
             scan(syntax.left);
             scan(syntax.right);
             break;
-        case "MemberExpression":
+        case 'MemberExpression':
             scan(syntax.object);
             scan(syntax.property);
             break;
-        case "NewExpression":
-            _.each(syntax.arguments, function(argumentSyntax) {
+        case 'NewExpression':
+            _.each(syntax.arguments, argumentSyntax => {
                 scan(argumentSyntax);
             });
             break;
-        case "ObjectExpression":
-            _.each(syntax.properties, function(propertySyntax) {
+        case 'ObjectExpression':
+            _.each(syntax.properties, propertySyntax => {
                 scan(propertySyntax);
             });
             break;
-        case "Property":
+        case 'Property':
             scan(syntax.value);
             break;
-        case "TryStatement":
+        case 'TryStatement':
             scan(syntax.block);
             if (syntax.handler) {
                 scan(syntax.handler);
             }
-            _.each(syntax.guardedHandlers, function(guardedHandlerSyntax) {
+            _.each(syntax.guardedHandlers, guardedHandlerSyntax => {
                 scan(guardedHandlerSyntax);
             });
             if (syntax.finalizer) {
                 scan(syntax.finalizer);
             }
             break;
-        case "SequenceExpression":
-            _.each(syntax.expressions, function(expressionSyntax) {
+        case 'SequenceExpression':
+            _.each(syntax.expressions, expressionSyntax => {
                 scan(expressionSyntax);
             });
             break;
-        case "SwitchCase":
+        case 'SwitchCase':
             if (syntax.test) {
                 scan(syntax.test);
             }
-            _.each(syntax.consequent, function(consequentSyntax) {
+            _.each(syntax.consequent, consequentSyntax => {
                 scan(consequentSyntax);
             });
             break;
-        case "SwitchStatement":
-            _.each(syntax.cases, function(caseSyntax) {
+        case 'SwitchStatement':
+            _.each(syntax.cases, caseSyntax => {
                 scan(caseSyntax);
             });
             break;
-        case "VariableDeclaration":
-            _.each(syntax.declarations, function(declarationSyntax) {
+        case 'VariableDeclaration':
+            _.each(syntax.declarations, declarationSyntax => {
                 scan(declarationSyntax);
             });
             break;
-        case "VariableDeclarator":
+        case 'VariableDeclarator':
             if (syntax.init) {
                 scan(syntax.init);
             }
@@ -207,7 +209,7 @@ module.exports = function(file, options) {
             }
             if (syntax.body) {
                 if (_.isArray(syntax.body)) {
-                    _.each(syntax.body, function(bodySyntax) {
+                    _.each(syntax.body, bodySyntax => {
                         scan(bodySyntax);
                     });
                 } else {
@@ -215,7 +217,7 @@ module.exports = function(file, options) {
                 }
             }
         }
-    }
+    };
 
     scan(esprima.parse(contents, { loc: true }));
 

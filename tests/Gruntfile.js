@@ -8,74 +8,73 @@
 
 "use strict";
 
-var chalk = require("chalk");
-var _ = require("lodash");
+const chalk = require('chalk');
 
-module.exports = function(grunt) {
+module.exports = grunt => {
 
     grunt.initConfig({
         xgettext: {
             default_options: {
                 options: {
-                    functionName: ["tr", "i18n.tr", "i18n"],
-                    potFile: "messages.pot"
+                    functionName: ['tr', 'i18n.tr', 'i18n'],
+                    potFile: 'messages.pot'
                 },
 
                 files: {
-                    handlebars: ["assets/*.handlebars"],
-                    html: ["assets/*.html"],
-                    javascript: ["assets/*.js"]
+                    handlebars: ['assets/*.handlebars'],
+                    html: ['assets/*.html'],
+                    javascript: ['assets/*.js']
                 }
             }
         }
     });
 
-    grunt.loadTasks("../tasks");
+    grunt.loadTasks('../tasks');
 
-    grunt.registerTask("compare", "Compare extracted messages with expected messages", function() {
+    grunt.registerTask('compare', 'Compare extracted messages with expected messages', () => {
 
-        function readPoLines(filename) {
-            var content = grunt.file.read(filename);
-            return content.split("\n");
-        }
+        const readPoLines = filename => {
+            const content = grunt.file.read(filename);
+            return content.split('\n');
+        };
 
-        var expectedLines = readPoLines("messages.expected.pot");
-        var extractedLines = readPoLines("messages.pot");
+        const expectedLines = readPoLines('messages.expected.pot');
+        const extractedLines = readPoLines('messages.pot');
 
-        var debugExtractedLines = [];
-        var debugExpectedLines = [];
+        const debugExtractedLines = [];
+        const debugExpectedLines = [];
 
-        var hasError = false;
-        for (var i = 0; i < expectedLines.length || i < extractedLines.length; i++) {
-            var expectedLine = expectedLines[i] || "";
-            var extractedLine = extractedLines[i] || "";
+        let hasError = false;
+        for (let i = 0; i < expectedLines.length || i < extractedLines.length; i++) {
+            const expectedLine = expectedLines[i] || '';
+            const extractedLine = extractedLines[i] || '';
 
-            if (expectedLine.slice(0, 1) === "#" && expectedLine.slice(1, 2) !== "." &&
-                extractedLine.slice(0, 1) === "#" && extractedLine.slice(1, 2) !== ".") {
+            if (expectedLine.slice(0, 1) === '#' && expectedLine.slice(1, 2) !== '.' &&
+                extractedLine.slice(0, 1) === '#' && extractedLine.slice(1, 2) !== '.') {
                 continue;
             }
 
             if (expectedLines[i] === extractedLines[i]) {
-                debugExpectedLines.push("  " + chalk.cyan(expectedLine));
-                debugExtractedLines.push("  " + chalk.cyan(extractedLine));
+                debugExpectedLines.push('  ' + chalk.cyan(expectedLine));
+                debugExtractedLines.push('  ' + chalk.cyan(extractedLine));
             } else {
-                debugExpectedLines.push(chalk.red("> ") + chalk.cyan(expectedLine));
-                debugExtractedLines.push(chalk.red("> ") + chalk.cyan(extractedLine));
+                debugExpectedLines.push(chalk.red('> ') + chalk.cyan(expectedLine));
+                debugExtractedLines.push(chalk.red('> ') + chalk.cyan(extractedLine));
 
                 hasError = true;
             }
         }
 
         if (hasError) {
-            grunt.log.error("Extracted messages did not match expected messages.");
-            grunt.log.debug("Extracted:\n" + debugExtractedLines.join("\n"));
-            grunt.log.debug("Expected:\n" + debugExpectedLines.join("\n"));
+            grunt.log.error('Extracted messages did not match expected messages.');
+            grunt.log.debug('Extracted:\n' + debugExtractedLines.join('\n'));
+            grunt.log.debug('Expected:\n' + debugExpectedLines.join('\n'));
             return false;
         } else {
-            grunt.log.ok("Extracted messages match expected messages.");
+            grunt.log.ok('Extracted messages match expected messages.');
         }
     });
 
-    grunt.registerTask("default", ["xgettext", "compare"]);
+    grunt.registerTask('default', ['xgettext', 'compare']);
 
 };

@@ -28,6 +28,19 @@ function test4() {
     unknown.tr("unknown.tr() should not be extracted");
 }
 
+tr(
+    "This is some multiple line text" + "\n" +
+    "<br /><br />" + "\n" +
+    "With some strange formatting" + "\n" +
+    //@formatter:off
+    "<ul>" + "\n" +
+        "<li>Item 1</li>" + "\n" +
+        "<li>Item 2</li>" + "\n" +
+        "<li>Item 3</li>" + "\n" +
+    "</ul>"
+    //@formatter:on
+);
+
 function test5() {
     tr("September", { comment: "Translators: use all lower-case if months are not " +
                                "capitalized in your language" })
